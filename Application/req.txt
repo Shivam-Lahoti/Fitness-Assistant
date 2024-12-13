@@ -1,8 +1,6 @@
-streamlit==1.25.0
+streamlit
 sentence-transformers
-pinecone-client==2.2.1
-gemini-python
-numpy==1.25.0
-scikit-learn==1.3.0
-pandas==2.1.1
-python-dotenv==1.0.0
+elasticsearch
+google-generativeai
+python-dotenv
+

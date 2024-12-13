@@ -4,54 +4,83 @@ from llm_integrations import get_response_from_llm
 
 # Streamlit App Configuration
 st.set_page_config(
-    page_title="Fitness Assistant",
-    page_icon="💪",
+    page_title="AI-Powered Fitness Chat",
+    page_icon="💬",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Sidebar for settings or common queries
-st.sidebar.title("Explore Topics")
-common_queries = ["Weight Loss", "Strength Training", "Yoga Benefits", "Cardio Exercises"]
-selected_query = st.sidebar.selectbox("Quick Topics", ["-- Select --"] + common_queries)
+# Initialize session state for chat history and temporary input storage
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "temp_input" not in st.session_state:
+    st.session_state.temp_input = ""
 
-# Main Title and Description
-st.title("💪 AI-Powered Fitness Assistant")
+# Title and Description
+st.title("💬 AI-Powered Fitness Chat")
 st.markdown(
     """
-    Welcome to your personalized fitness guide!  
-    Ask any fitness-related questions or explore common topics to get tailored insights.
+    Welcome to your personalized fitness assistant!  
+    Engage in a conversational experience by asking any fitness-related questions.
     """
 )
 
+# Chat Display Section
+st.header("Chat")
+chat_container = st.container()
+
+with chat_container:
+    for chat in st.session_state.chat_history:
+        if chat["role"] == "user":
+            st.markdown(f"**You:** {chat['text']}")
+        elif chat["role"] == "assistant":
+            st.markdown(f"**AI:** {chat['text']}")
+        elif chat["role"] == "context":
+            st.markdown(f"**Context Retrieved:**\n{chat['text']}")
+
+# Divider
+st.divider()
+
 # Input Section
-st.header("📝 Ask Your Question")
-query_text = st.text_input("Enter your question:", value=selected_query if selected_query != "-- Select --" else "")
+query_text = st.text_input(
+    "Type your message:",
+    value=st.session_state.temp_input,
+    placeholder="Ask me anything about fitness...",
+)
 
-# Number of Results
-top_k = st.slider("Number of relevant contexts to retrieve:", min_value=1, max_value=10, value=5)
-
-# Retrieve and Display Response
-if st.button("Get Answer"):
+# Handle User Query
+if st.button("Send"):
     if query_text.strip():
-        # Retrieve context from Elasticsearch
-        with st.spinner("Retrieving relevant contexts..."):
-            context_results = query_index(query_text, top_k=top_k)
+        # Add user query to chat history
+        st.session_state.chat_history.append({"role": "user", "text": query_text})
+
+        # Retrieve relevant context
+        with st.spinner("Fetching relevant contexts..."):
+            context_results = query_index(query_text, top_k=5)
 
         if context_results:
-            st.subheader("📄 Relevant Contexts")
-            context_text = "\n".join([f"- {result['text']}" for result in context_results])
-            st.markdown(context_text)
+            # Add retrieved context to chat history
+            context_text = "\n".join([f"- {ctx['text']}" for ctx in context_results])
+            st.session_state.chat_history.append({"role": "context", "text": context_text})
 
-            # Generate response using LLM
-            with st.spinner("Generating response with LLM..."):
-                prompt = f"Using the following context, answer the question:\n\nContext:\n{context_text}\n\nQuestion: {query_text}"
-                response = get_response_from_llm(prompt)
+        # Prepare context from previous chat history
+        previous_responses = "\n".join(
+            [f"AI: {item['text']}" for item in st.session_state.chat_history if item["role"] == "assistant"]
+        )
+        prompt = f"Using previous responses and the user's new query:\n\nPrevious Responses:\n{previous_responses}\n\nNew Query: {query_text}"
 
-            st.subheader("🤖 LLM Response")
-            st.markdown(response)
-        else:
-            st.warning("No relevant context found. Try rephrasing your question or increasing the number of results.")
+        # Generate response from LLM
+        with st.spinner("AI is typing..."):
+            response = get_response_from_llm(prompt)
+
+        # Add LLM response to chat history
+        st.session_state.chat_history.append({"role": "assistant", "text": response})
+
+        # Clear the input box
+        st.session_state.temp_input = ""
+
+        # Rerun to update chat
+        st.experimental_rerun()
     else:
         st.error("Please enter a valid question.")
 
@@ -59,8 +88,8 @@ if st.button("Get Answer"):
 st.markdown(
     """
     ---
-    Powered by:
-    - **[Pinecone](https://www.pinecone.io/)** for vector database management.  
+    **Powered by:**  
+    - **[Elastic Search](https://www.elastic.co/)** for vector database management.  
     - **[Google Generative AI](https://cloud.google.com/vertex-ai/docs/generative-ai/overview)** for advanced AI capabilities.  
     - **[Streamlit](https://streamlit.io/)** for an interactive frontend.
     """

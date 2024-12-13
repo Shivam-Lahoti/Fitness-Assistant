@@ -1,68 +1,52 @@
+import os
 from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
-import os
 
-# Initialize Elasticsearch and SentenceTransformer
-es = Elasticsearch(
-    "http://localhost:9200",  
-   
-)
+# Initialize Elasticsearch and embedding model
+es = Elasticsearch("http://localhost:9200")
 model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
-# Define the index name
+# Elasticsearch index name
 INDEX_NAME = "fitness-vector-search"
 
-
+# Function to create the Elasticsearch index
 def create_index():
-    """
-    Create an Elasticsearch index with vector search support.
-    """
     if not es.indices.exists(index=INDEX_NAME):
         es.indices.create(
             index=INDEX_NAME,
             body={
                 "mappings": {
                     "properties": {
-                        "embedding": {
-                            "type": "dense_vector",
-                            "dims": 384
-                        },
-                        "text": {
-                            "type": "text"
-                        }
+                        "embedding": {"type": "dense_vector", "dims": 384},
+                        "text": {"type": "text"}
                     }
                 }
             }
         )
-        print(f"Index '{INDEX_NAME}' created successfully!")
+        print(f"Index '{INDEX_NAME}' created successfully.")
     else:
         print(f"Index '{INDEX_NAME}' already exists.")
 
-
+# Function to load data from a .txt file
 def load_data(file_path):
-
     with open(file_path, "r", encoding="utf-8") as file:
-        return [line.strip() for line in file.readlines() if line.strip()]
+        return [line.strip() for line in file if line.strip()]
 
-
+# Function to index data into Elasticsearch
 def add_to_index(data):
-
     embeddings = model.encode(data).tolist()
     for i, (text, embedding) in enumerate(zip(data, embeddings)):
+        doc_id = f"{hash(text)}"  # Use hash of the text as a unique ID
         es.index(
             index=INDEX_NAME,
-            id=i,
-            body={
-                "text": text,
-                "embedding": embedding
-            }
+            id=doc_id,
+            body={"text": text, "embedding": embedding}
         )
-    print(f"Added {len(data)} items to the index '{INDEX_NAME}'.")
+    print(f"Indexed {len(data)} documents successfully.")
 
-
-def query_index(query_text, top_k=5):
-
-    query_embedding = model.encode([query_text]).tolist()[0]
+# Function to query the Elasticsearch index
+def query_index(query, top_k=5):
+    query_embedding = model.encode([query]).tolist()[0]
     response = es.search(
         index=INDEX_NAME,
         body={
@@ -84,27 +68,27 @@ def query_index(query_text, top_k=5):
         for hit in response["hits"]["hits"]
     ]
 
-
 if __name__ == "__main__":
     # Step 1: Create Elasticsearch index
     create_index()
 
-    # Step 2: Load data from the `data` folder
-    data_file = os.path.join("data", "fitness_data.txt")
-    if os.path.exists(data_file):
-        data = load_data(data_file)
-        if data:
-            print(f"Loaded {len(data)} lines of text from {data_file}")
-            # Step 3: Add data to the Elasticsearch index
-            add_to_index(data)
+    # Step 2: Load and index data from all `.txt` files in the `data` folder
+    data_folder = "data"
+    if os.path.exists(data_folder):
+        txt_files = [f for f in os.listdir(data_folder) if f.endswith(".txt")]
+        if txt_files:
+            for file_name in txt_files:
+                file_path = os.path.join(data_folder, file_name)
+                print(f"Processing file: {file_name}")
+                data = load_data(file_path)
+                if data:
+                    print(f"Loaded {len(data)} lines from {file_name}.")
+                    add_to_index(data)
+                else:
+                    print(f"No data found in {file_name}.")
         else:
-            print("No data found in the file.")
+            print("No .txt files found in the 'data' folder.")
     else:
-        print(f"Data file '{data_file}' not found.")
+        print(f"Data folder '{data_folder}' not found.")
 
-    # Step 4: Query the index
-    query = "Best exercises for beginners"
-    results = query_index(query)
-    print("Query Results:")
-    for result in results:
-        print(f"Text: {result['text']}, Score: {result['score']}")
+
