@@ -89,7 +89,7 @@ st.markdown(
     """
     ---
     **Powered by:**  
-    - **[Elastic Search](https://www.elastic.co/)** for vector database management.  
+    - **[Pinecone](https://www.pinecone.io/?utm_term=pinecone%20vector%20database&utm_campaign=brand-us-e&utm_source=adwords&utm_medium=ppc&hsa_acc=3111363649&hsa_cam=21023369441&hsa_grp=167470667468&hsa_ad=690982708943&hsa_src=g&hsa_tgt=kwd-1538083228315&hsa_kw=pinecone%20vector%20database&hsa_mt=e&hsa_net=adwords&hsa_ver=3&gad_source=1&gclid=Cj0KCQiA0--6BhCBARIsADYqyL_Bpdl1Ij39V2lhjdBWKBcUjBfqQVlSLWSalj6_EnkMdNaVLkkNPgUaAnJaEALw_wcB)** for vector database management.  
     - **[Google Generative AI](https://cloud.google.com/vertex-ai/docs/generative-ai/overview)** for advanced AI capabilities.  
     - **[Streamlit](https://streamlit.io/)** for an interactive frontend.
     """
