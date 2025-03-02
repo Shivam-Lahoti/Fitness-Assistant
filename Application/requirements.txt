@@ -1,6 +1,0 @@
-streamlit
-sentence-transformers
-elasticsearch
-google-generativeai
-python-dotenv
-
